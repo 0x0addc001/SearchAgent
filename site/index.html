@@ -151,7 +151,7 @@
         <h1 class="hero-title">
           <span data-en="Hi! I’m" data-zh="Hi！我是">Hi! I’m</span>
           <span class="hero-title-accent" data-en="Jialiang Li’s SearchAgent" data-zh="李嘉梁的SearchAgent">Jialiang Li’s SearchAgent</span>
-          <span data-en="An Actively Reasoning" data-zh="一个主动递归推理调查并直出研究报告的">An Actively Reasoning</span>
+          <span data-en="An Actively Reasoning" data-zh="一个主动递归推理调查并直出研究报告的" data-break-before="并">An Actively Reasoning</span>
           <span class="hero-title-accent" data-en="Retrieval Decision Engine" data-zh="检索决策引擎">Retrieval Decision Engine</span>
         </h1>
         <p class="hero-subtitle" data-en="Ranking algorithms stop at relevance scores. SearchAgent plans queries, reconciles sources, and hands the customer a verified answer." data-zh="传统排序算法止步于相关度分数；SearchAgent 自主规划查询、核对来源，并把可验证答案直接交给客户。">Ranking algorithms stop at relevance scores. SearchAgent plans queries, reconciles sources, and hands the customer a verified answer.</p>
@@ -258,13 +258,35 @@
         });
       }
 
-      async function streamText(element, text, token) {
+      function renderBrokenText(element, text) {
+        const marker = element.dataset.breakBefore;
+        const breakIndex = marker ? text.indexOf(marker) : -1;
+        element.replaceChildren();
+        if (breakIndex <= 0) {
+          element.textContent = text;
+          return;
+        }
+        element.append(document.createTextNode(text.slice(0, breakIndex)));
+        element.append(document.createElement("br"));
+        element.append(document.createTextNode(text.slice(breakIndex)));
+      }
+
+      async function streamText(element, text, token, breakBefore = "") {
         element.style.visibility = "visible";
         element.classList.add("is-streaming");
-        element.textContent = "";
+        element.replaceChildren();
+        let textNode = document.createTextNode("");
+        element.append(textNode);
+        let breakInserted = false;
         for (const character of Array.from(text)) {
           if (token !== streamToken) return false;
-          element.textContent += character;
+          if (!breakInserted && breakBefore && character === breakBefore) {
+            element.append(document.createElement("br"));
+            textNode = document.createTextNode("");
+            element.append(textNode);
+            breakInserted = true;
+          }
+          textNode.appendData(character);
           await wait(/[，。！？；：,.!?;:]/.test(character) ? 62 : 18, token);
         }
         element.classList.remove("is-streaming");
@@ -274,9 +296,13 @@
       async function streamHero() {
         clearStreamTimers();
         const token = streamToken;
-        if (reduceMotion.matches) return;
         const lineTexts = heroLines.map((line) => line.textContent.trim());
+        const breakMarkers = heroLines.map((line) => line.dataset.breakBefore || "");
         const subtitleText = heroSubtitle.textContent.trim();
+        if (reduceMotion.matches) {
+          heroLines.forEach((line, index) => renderBrokenText(line, lineTexts[index]));
+          return;
+        }
         heroLines.forEach((line) => {
           line.textContent = "";
           line.style.visibility = "hidden";
@@ -284,7 +310,7 @@
         heroSubtitle.textContent = "";
         heroSubtitle.style.visibility = "hidden";
         for (const [index, line] of heroLines.entries()) {
-          if (!(await streamText(line, lineTexts[index], token))) return;
+          if (!(await streamText(line, lineTexts[index], token, breakMarkers[index]))) return;
           await wait(110, token);
         }
         await streamText(heroSubtitle, subtitleText, token);
