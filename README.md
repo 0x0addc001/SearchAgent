@@ -6,8 +6,6 @@ SearchAgent turns noisy queries into grounded, ranked answers across changing ca
 
 面向动态数据源的搜索 Agent：完成查询理解、混合召回、重排、证据聚合与答案生成。
 
-**Status:** Project scaffold · [Portfolio](https://0x0addc001.github.io/#use-cases)
-
 ## Agent loop
 
 | Stage | Responsibility |

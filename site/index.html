@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SearchAgent turns noisy queries into grounded, ranked answers across changing catalogs, documents, and live sources.">
+  <meta name="theme-color" content="#07111f">
+  <title>Search Agent — Agent-as-a-Service</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("SearchAgent-theme");
+      document.documentElement.dataset.theme = savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const savedLanguage = localStorage.getItem("SearchAgent-language");
+      document.documentElement.lang = savedLanguage || "en";
+    } catch { document.documentElement.dataset.theme = "dark"; }
+  </script>
+  <style>
+    :root {
+      --paper: #f3f7fc;
+      --paper-soft: #e6eef8;
+      --panel: rgba(255,255,255,.72);
+      --ink: #0b1626;
+      --muted: #53657c;
+      --line: rgba(17,42,76,.18);
+      --accent: #4d8dff;
+      --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+      --reverse: #f7fbff;
+    }
+    :root[data-theme="dark"] {
+      --paper: #07111f;
+      --paper-soft: #0a192b;
+      --panel: rgba(12,29,50,.72);
+      --ink: #f2f7ff;
+      --muted: #9db0ca;
+      --line: rgba(207,225,255,.16);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 82% 0, color-mix(in srgb, var(--accent) 20%, transparent), transparent 30rem),
+        linear-gradient(145deg, var(--paper), var(--paper-soft));
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 84%, transparent);
+      backdrop-filter: blur(18px);
+    }
+    .topbar-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 13px; text-decoration: none; }
+    .brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--accent); color: var(--accent); font: 700 12px/1 "Consolas", monospace; }
+    .brand strong, .brand small { display: block; }
+    .brand strong { font-family: Georgia, serif; font-size: 1rem; }
+    .brand small { margin-top: 3px; color: var(--muted); font: 600 10px/1.2 "Consolas", monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .nav { display: flex; gap: 24px; }
+    .nav a { color: var(--muted); font: 600 .76rem/1 "Consolas", monospace; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
+    .nav a:hover { color: var(--accent); }
+    .controls { display: flex; gap: 8px; }
+    .control { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); color: var(--ink); background: transparent; cursor: pointer; font: 650 .75rem/1 "Consolas", monospace; }
+    .control:hover { border-color: var(--accent); color: var(--accent); }
+    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: clamp(40px, 8vw, 110px); align-items: center; padding-block: clamp(80px, 11vw, 150px); }
+    .eyebrow, .stage-index { color: var(--accent); font: 650 .72rem/1.4 "Consolas", monospace; letter-spacing: .12em; }
+    h1, h2, h3 { margin: 0; }
+    h1 { max-width: 850px; margin-top: 22px; font: 400 clamp(3.3rem, 7vw, 7rem)/.94 Georgia, serif; letter-spacing: -.055em; }
+    .tagline { margin: 24px 0 0; color: var(--accent); font: italic 400 clamp(1.3rem, 2vw, 1.8rem)/1.35 Georgia, serif; }
+    .intro { max-width: 760px; margin: 24px 0 0; color: var(--muted); font-size: 1.08rem; line-height: 1.8; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .action { display: inline-flex; align-items: center; gap: 20px; min-height: 46px; padding: 0 16px; border: 1px solid var(--accent); text-decoration: none; font: 650 .78rem/1 "Consolas", monospace; letter-spacing: .04em; }
+    .action.primary { color: var(--reverse); background: var(--accent); }
+    .action.secondary { color: var(--accent); background: var(--accent-soft); }
+    .action:hover { transform: translateY(-2px); }
+    .signal { position: relative; aspect-ratio: 1; max-width: 420px; justify-self: end; }
+    .signal::before, .signal::after { position: absolute; border: 1px solid var(--line); content: ""; inset: 8%; border-radius: 50%; }
+    .signal::after { inset: 24%; }
+    .signal-core { position: absolute; inset: 36%; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft); font: 700 1rem/1 "Consolas", monospace; }
+    .signal-node { position: absolute; width: 9px; height: 9px; border: 2px solid var(--paper); background: var(--accent); box-shadow: 0 0 16px var(--accent); animation: pulse 2.4s ease-in-out infinite alternate; }
+    .node-1 { top: 8%; left: 47%; } .node-2 { top: 29%; right: 10%; animation-delay: -.4s; } .node-3 { right: 18%; bottom: 15%; animation-delay: -.8s; }
+    .node-4 { bottom: 8%; left: 46%; animation-delay: -1.2s; } .node-5 { left: 12%; bottom: 24%; animation-delay: -1.6s; } .node-6 { top: 20%; left: 16%; animation-delay: -2s; }
+    @keyframes pulse { to { transform: scale(1.6); opacity: .45; } }
+    .section { padding-block: clamp(64px, 8vw, 110px); border-top: 1px solid var(--line); }
+    .section-head { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 28px; align-items: start; margin-bottom: 38px; }
+    .section-head h2 { font: 400 clamp(2.4rem, 4vw, 4.2rem)/1 Georgia, serif; letter-spacing: -.045em; }
+    .section-head p { max-width: 680px; margin: 12px 0 0; color: var(--muted); line-height: 1.7; }
+    .stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .stage { min-height: 230px; padding: 25px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel); }
+    .stage:nth-child(2), .stage:nth-child(5) { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+    .stage h3 { margin-top: 28px; font: 400 1.5rem/1.15 Georgia, serif; }
+    .stage p { margin: 14px 0 0; color: var(--muted); line-height: 1.65; }
+    .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .principles article { min-height: 210px; padding: 24px; border: 1px solid var(--line); background: var(--panel); }
+    .principles span { color: var(--accent); font: 650 .75rem/1 "Consolas", monospace; }
+    .principles h3 { margin-top: 42px; font: 400 1.45rem/1.2 Georgia, serif; }
+    .principles p { color: var(--muted); line-height: 1.65; }
+    footer { padding-block: 36px; border-top: 1px solid var(--line); color: var(--muted); font: .76rem/1.6 "Consolas", monospace; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
+    footer a { color: var(--accent); }
+    @media (max-width: 860px) {
+      .nav { display: none; }
+      .hero { grid-template-columns: 1fr; }
+      .signal { width: min(320px, 78vw); justify-self: start; }
+      .section-head { grid-template-columns: 1fr; gap: 10px; }
+      .stages, .principles { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 32px, 1180px); }
+      .brand small { display: none; }
+      .control { padding-inline: 9px; }
+      h1 { font-size: clamp(2.65rem, 13vw, 4rem); }
+      .stages, .principles { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark">JL</span>
+        <span><strong>SearchAgent</strong><small>Agent-as-a-Service</small></span>
+      </a>
+      <nav class="nav" aria-label="Project navigation">
+        <a href="#loop" data-en="Agent Loop" data-zh="Agent 闭环">Agent Loop</a>
+        <a href="#principles" data-en="Principles" data-zh="设计原则">Principles</a>
+      </nav>
+      <div class="controls">
+        <button class="control" type="button" data-language>中 / EN</button>
+        <button class="control" type="button" data-theme aria-label="Toggle color theme">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" id="top">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">01 / RETRIEVE / REASON / RANK</div>
+        <h1>Search Agent</h1>
+        <p class="tagline" data-en="Search that reaches beyond keywords." data-zh="越过关键词，找到真正有用的答案。">Search that reaches beyond keywords.</p>
+        <p class="intro" data-en="SearchAgent turns noisy queries into grounded, ranked answers across changing catalogs, documents, and live sources." data-zh="SearchAgent 将嘈杂查询转化为有证据支撑的排序结果，覆盖动态商品、文档与实时数据源。">SearchAgent turns noisy queries into grounded, ranked answers across changing catalogs, documents, and live sources.</p>
+        <div class="hero-actions">
+          <a class="action primary" href="https://github.com/0x0addc001/SearchAgent" target="_blank" rel="noreferrer">
+            <span data-en="View Repository" data-zh="查看代码仓库">View Repository</span><span>↗</span>
+          </a>
+          <a class="action secondary" href="#loop">
+            <span data-en="Explore the Agent Loop" data-zh="查看 Agent 闭环">Explore the Agent Loop</span><span>↓</span>
+          </a>
+        </div>
+      </div>
+      <div class="signal" aria-hidden="true">
+        <div class="signal-core">AaaS</div>
+        <i class="signal-node node-1"></i><i class="signal-node node-2"></i><i class="signal-node node-3"></i>
+        <i class="signal-node node-4"></i><i class="signal-node node-5"></i><i class="signal-node node-6"></i>
+      </div>
+    </section>
+
+    <section class="section" id="loop">
+      <div class="section-head">
+        <div class="eyebrow">SYSTEM / 06</div>
+        <div>
+          <h2 data-en="One loop. Six layers." data-zh="一个闭环，六个层次。">One loop. Six layers.</h2>
+          <p data-en="From raw signals to measurable behavior, each layer contributes a distinct part of the Agent system." data-zh="从原始信号到可衡量行为，每一层都承担 Agent 系统中不可替代的一部分。">From raw signals to measurable behavior, each layer contributes a distinct part of the Agent system.</p>
+        </div>
+      </div>
+      <div class="stages">
+        <article class="stage">
+          <div class="stage-index">01 / DATA</div>
+          <h3 data-en="Queries &amp; sources" data-zh="查询与数据源">Queries &amp; sources</h3>
+          <p data-en="Queries, catalogs, documents, events, freshness metadata." data-zh="查询、商品、文档、事件与新鲜度元数据。">Queries, catalogs, documents, events, freshness metadata.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">02 / MODELS</div>
+          <h3 data-en="Retrieve &amp; reason" data-zh="召回与推理">Retrieve &amp; reason</h3>
+          <p data-en="Query rewriting, hybrid retrieval, reranking, grounded synthesis." data-zh="查询改写、混合召回、重排与证据合成。">Query rewriting, hybrid retrieval, reranking, grounded synthesis.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">03 / TRAINING</div>
+          <h3 data-en="Learn relevance" data-zh="学习相关性">Learn relevance</h3>
+          <p data-en="Preference pairs, relevance judgments, reward modeling." data-zh="偏好对、相关性标注与奖励建模。">Preference pairs, relevance judgments, reward modeling.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">04 / INFERENCE</div>
+          <h3 data-en="Fast discovery" data-zh="低延迟发现">Fast discovery</h3>
+          <p data-en="Low-latency recall, filtering, reranking and streaming answers." data-zh="低延迟召回、过滤、重排与流式回答。">Low-latency recall, filtering, reranking and streaming answers.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">05 / HARNESS</div>
+          <h3 data-en="Search tools" data-zh="搜索工具链">Search tools</h3>
+          <p data-en="Search APIs, index refreshes, freshness and policy tools." data-zh="搜索 API、索引刷新、新鲜度与策略工具。">Search APIs, index refreshes, freshness and policy tools.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">06 / EVAL</div>
+          <h3 data-en="Measure usefulness" data-zh="衡量有效性">Measure usefulness</h3>
+          <p data-en="Relevance, coverage, citation quality, latency, zero-result rate." data-zh="相关性、覆盖率、引用质量、延迟与无结果率。">Relevance, coverage, citation quality, latency, zero-result rate.</p>
+        </article></div>
+    </section>
+
+    <section class="section" id="principles">
+      <div class="section-head">
+        <div class="eyebrow">NON-NEGOTIABLES</div>
+        <div>
+          <h2 data-en="Built to stay trustworthy." data-zh="可靠，是设计出来的。">Built to stay trustworthy.</h2>
+          <p data-en="The Agent is only as useful as the boundaries around it are clear." data-zh="Agent 的价值，取决于它周围的边界是否足够清晰。">The Agent is only as useful as the boundaries around it are clear.</p>
+        </div>
+      </div>
+      <div class="principles">
+        <article>
+          <span>01</span>
+          <h3 data-en="Evidence first" data-zh="证据优先">Evidence first</h3>
+          <p data-en="Every claim stays connected to retrieved sources." data-zh="每个结论都与检索到的来源保持可追溯连接。">Every claim stays connected to retrieved sources.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3 data-en="Task success, not score chasing" data-zh="任务成功优先">Task success, not score chasing</h3>
+          <p data-en="Optimize the complete discovery loop, not one ranking metric." data-zh="优化完整的发现闭环，而不是只追逐单个排序指标。">Optimize the complete discovery loop, not one ranking metric.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3 data-en="Freshness is part of quality" data-zh="新鲜度就是质量">Freshness is part of quality</h3>
+          <p data-en="Stale retrieval is a product failure, not a hidden tradeoff." data-zh="过时检索是产品失败，而不是可以被隐藏的权衡。">Stale retrieval is a product failure, not a hidden tradeoff.</p>
+        </article></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <span>SearchAgent / Agent-as-a-Service</span>
+      <a href="https://github.com/0x0addc001/SearchAgent" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const languageButton = document.querySelector("[data-language]");
+      const themeButton = document.querySelector("[data-theme]");
+      const translatable = [...document.querySelectorAll("[data-en][data-zh]")];
+      let language = root.lang === "zh" ? "zh" : "en";
+      function applyLanguage() {
+        root.lang = language;
+        document.documentElement.dataset.language = language;
+        translatable.forEach((node) => { node.textContent = node.dataset[language]; });
+        languageButton.textContent = language === "en" ? "中 / EN" : "EN / 中";
+        try { localStorage.setItem("SearchAgent-language", language); } catch {}
+      }
+      languageButton.addEventListener("click", () => { language = language === "en" ? "zh" : "en"; applyLanguage(); });
+      themeButton.addEventListener("click", () => {
+        const next = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = next;
+        try { localStorage.setItem("SearchAgent-theme", next); } catch {}
+      });
+      applyLanguage();
+    })();
+  </script>
+</body>
+</html>
